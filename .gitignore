@@ -47,8 +47,5 @@ ENV/
 ehthumbs.db
 Thumbs.db
 
-# Claude
-.claude/
-
 # Logs
 *.log

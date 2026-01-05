@@ -1,0 +1,159 @@
+{
+  "timestamp": 1767619471.35989,
+  "data": {
+    "eastus": [
+      {
+        "model": "gpt-4",
+        "input_price": "0.03",
+        "output_price": "0.06"
+      },
+      {
+        "model": "gpt-4-32k",
+        "input_price": "0.06",
+        "output_price": "0.12"
+      },
+      {
+        "model": "gpt-3.5-turbo",
+        "input_price": "0.0015",
+        "output_price": "0.002"
+      },
+      {
+        "model": "deepseek-r1",
+        "input_price": "0.001",
+        "output_price": "0.002"
+      },
+      {
+        "model": "kimi-k2-thinking",
+        "input_price": "0.0012",
+        "output_price": "0.0024"
+      },
+      {
+        "model": "DeepSeek-V3.2",
+        "input_price": "0.001",
+        "output_price": "0.002"
+      },
+      {
+        "model": "gpt-5-mini",
+        "input_price": "0.015",
+        "output_price": "0.03"
+      },
+      {
+        "model": "gpt-5-chat",
+        "input_price": "0.03",
+        "output_price": "0.06"
+      },
+      {
+        "model": "grok-4",
+        "input_price": "0.02",
+        "output_price": "0.04"
+      },
+      {
+        "model": "o3-mini",
+        "input_price": "0.01",
+        "output_price": "0.02"
+      },
+      {
+        "model": "o4-mini",
+        "input_price": "0.02",
+        "output_price": "0.04"
+      },
+      {
+        "model": "gpt-5.2-chat",
+        "input_price": "0.04",
+        "output_price": "0.08"
+      },
+      {
+        "model": "gpt-5.2",
+        "input_price": "0.04",
+        "output_price": "0.08"
+      },
+      {
+        "model": "gpt-4.1",
+        "input_price": "0.035",
+        "output_price": "0.07"
+      },
+      {
+        "model": "gpt-4o",
+        "input_price": "0.025",
+        "output_price": "0.05"
+      }
+    ],
+    "westeurope": [
+      {
+        "model": "gpt-4",
+        "input_price": "0.03",
+        "output_price": "0.06"
+      },
+      {
+        "model": "gpt-4-32k",
+        "input_price": "0.06",
+        "output_price": "0.12"
+      },
+      {
+        "model": "gpt-3.5-turbo",
+        "input_price": "0.0015",
+        "output_price": "0.002"
+      },
+      {
+        "model": "deepseek-r1",
+        "input_price": "0.001",
+        "output_price": "0.002"
+      },
+      {
+        "model": "kimi-k2-thinking",
+        "input_price": "0.0012",
+        "output_price": "0.0024"
+      },
+      {
+        "model": "DeepSeek-V3.2",
+        "input_price": "0.001",
+        "output_price": "0.002"
+      },
+      {
+        "model": "gpt-5-mini",
+        "input_price": "0.015",
+        "output_price": "0.03"
+      },
+      {
+        "model": "gpt-5-chat",
+        "input_price": "0.03",
+        "output_price": "0.06"
+      },
+      {
+        "model": "grok-4",
+        "input_price": "0.02",
+        "output_price": "0.04"
+      },
+      {
+        "model": "o3-mini",
+        "input_price": "0.01",
+        "output_price": "0.02"
+      },
+      {
+        "model": "o4-mini",
+        "input_price": "0.02",
+        "output_price": "0.04"
+      },
+      {
+        "model": "gpt-5.2-chat",
+        "input_price": "0.04",
+        "output_price": "0.08"
+      },
+      {
+        "model": "gpt-5.2",
+        "input_price": "0.04",
+        "output_price": "0.08"
+      },
+      {
+        "model": "gpt-4.1",
+        "input_price": "0.035",
+        "output_price": "0.07"
+      },
+      {
+        "model": "gpt-4o",
+        "input_price": "0.025",
+        "output_price": "0.05"
+      }
+    ]
+  }
+}
