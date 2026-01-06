@@ -1,9 +1,9 @@
 ---
-name: foundry-deployments
-description: "Use when working with Microsoft Foundry (Azure AI Projects) via Python to enumerate model deployments, fetch deployment details, wire an OpenAI client, fetch model prices, list available models, and get deployment guidance. Triggers: listing available models/endpoints, checking deployment metadata (publisher/model/version/SKU), validating deployment names, fetching pricing, or deploying models."
+name: azure-ai
+description: "Use when working with Microsoft Azure AI Projects via Python to enumerate model deployments, fetch deployment details, wire an OpenAI client, fetch model prices, list available models, and get deployment guidance. Triggers: listing available models/endpoints, checking deployment metadata (publisher/model/version/SKU), validating deployment names, fetching pricing, or deploying models."
 ---
 
-# Foundry Deployments
+# Azure AI
 
 ## Overview
 - Focuses on the `azure-ai-projects` Python client (Foundry data-plane) to explore project deployments.
