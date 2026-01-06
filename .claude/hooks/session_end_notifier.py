@@ -186,6 +186,31 @@ def get_session_summary(data: dict) -> dict:
     return summary
 
 
+def escape_markdown_v2(text: str) -> str:
+    """Escape text for Telegram MarkdownV2 format.
+
+    MarkdownV2 requires escaping these special characters:
+    _ * [ ] ( ) ~ ` > # + - = | { } . !
+
+    ALL instances must be escaped, even inside inline code.
+    """
+    if not text:
+        return text
+    special_chars = r'_*[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{c}' if c in special_chars else c for c in text)
+
+
+def escape_markdown_v2_safe(text: str) -> str:
+    """Escape text for Telegram MarkdownV2, preserving bold markers.
+
+    Only escapes the actual content, not *bold* markers.
+    """
+    if not text:
+        return text
+    special_chars = r'_[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{c}' if c in special_chars else c for c in text)
+
+
 def format_duration(seconds: int | None) -> str:
     """Format duration in human-readable format."""
     if seconds is None:
@@ -202,17 +227,22 @@ def format_duration(seconds: int | None) -> str:
         return f"{secs}s"
 
 
-def generate_ai_summary(conversation: list) -> str:
-    """Generate an AI summary of the conversation using Azure OpenAI REST API."""
+def generate_ai_summary(conversation: list) -> tuple[str, dict]:
+    """Generate an AI summary of the conversation using Azure OpenAI REST API.
+
+    Returns:
+        tuple: (summary_text, token_usage_dict) where token_usage_dict has
+               keys: input_tokens, output_tokens, total_tokens
+    """
     if not conversation or not httpx:
-        return ""
+        return "", {}
 
     endpoint = os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
     api_key = os.environ.get("AZURE_API_KEY") or os.environ.get("AZURE_AI_API_KEY") or os.environ.get("AZURE_OPENAI_API_KEY")
     deployment = os.environ.get("AZURE_AI_DEPLOYMENT", "gpt-5-mini")
 
     if not endpoint or not api_key:
-        return ""
+        return "", {}
 
     try:
         conv_text = "\n".join(
@@ -220,7 +250,7 @@ def generate_ai_summary(conversation: list) -> str:
             for t in conversation[-10:]
         )
 
-        prompt = f"Summarize this Claude Code session in under 150 words. Use bullet points. Focus on what was accomplished.\n\nConversation:\n{conv_text}\n\nSummary:"
+        prompt = f"Summarize this Claude Code session in under 100 words. Use bullet points. Focus on what was accomplished.\n\nConversation:\n{conv_text}\n\nSummary:"
 
         # Build Azure OpenAI URL from Foundry endpoint
         if ".services.ai.azure.com" in endpoint:
@@ -234,30 +264,40 @@ def generate_ai_summary(conversation: list) -> str:
         response = httpx.post(
             url,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"messages": [{"role": "user", "content": prompt}], "model": deployment, "max_completion_tokens": 2000},
+            json={"messages": [{"role": "user", "content": prompt}], "model": deployment, "max_completion_tokens": 500},
             timeout=30.0
         )
 
         if response.status_code == 200:
-            return response.json()["choices"][0]["message"]["content"].strip()
+            data = response.json()
+            # Extract token usage
+            usage = data.get("usage", {})
+            token_info = {
+                "input_tokens": usage.get("prompt_tokens", 0),
+                "output_tokens": usage.get("completion_tokens", 0),
+                "total_tokens": usage.get("total_tokens", 0),
+            }
+            _debug(f"Summary generation tokens: input={token_info['input_tokens']}, output={token_info['output_tokens']}, total={token_info['total_tokens']}")
+            return data["choices"][0]["message"]["content"].strip(), token_info
         else:
             print(f"API error: {response.status_code} - {response.text}", file=sys.stderr)
 
     except Exception as e:
         print(f"Summary generation error: {e}", file=sys.stderr)
 
-    return ""
+    return "", {}
 
 
 def format_ai_summary_as_bullets(summary_text: str) -> str:
-    """Format AI summary as bullet points."""
+    """Format AI summary as bullet points (plain text, no markdown)."""
     if not summary_text:
         return ""
 
-    # Already formatted bullets
+    # Already formatted bullets - keep as is but clean up
     first_char = summary_text.strip()[0]
     if first_char in '-*•0123456789':
-        return summary_text.strip()
+        lines = [line.strip() for line in summary_text.split('\n') if line.strip()]
+        return '\n'.join(lines)
 
     # Format as bullets
     summary_text = ' '.join(summary_text.split())
@@ -270,38 +310,54 @@ def format_ai_summary_as_bullets(summary_text: str) -> str:
         else:
             if not line.endswith(('.!', '?', ':', '.')):
                 line += '.'
-            formatted.append(f"- {line}")
+            formatted.append(f"• {line}")
 
     return '\n'.join(formatted)
 
 
-def generate_session_stats(summary: dict) -> str:
-    """Generate session stats with styling."""
+def generate_session_stats(summary: dict, summary_tokens: dict = None) -> str:
+    """Generate session stats with MarkdownV2 styling.
+
+    Args:
+        summary: Session summary dict
+        summary_tokens: Optional dict with keys: input_tokens, output_tokens, total_tokens
+    """
     lines = []
 
-    # Project info - use full path
+    # Project info - use full path with markdown
     if summary["project_dir"]:
-        lines.append(f"📁 Project: {summary['project_dir']}")
+        project = escape_markdown_v2(summary['project_dir'])
+        lines.append(f"📁 *Project:* `{project}`")
         if summary["git_branch"]:
-            lines.append(f"🌿 Branch: {summary['git_branch']}")
+            branch = escape_markdown_v2(summary['git_branch'])
+            lines.append(f"🌿 *Branch:* `{branch}`")
 
-    # Session stats with emoji
-    lines.append(f"🤖 Model: {summary['model']}")
-    lines.append(f"⏱️ Duration: {format_duration(summary['duration'])}")
-    lines.append(f"💬 Turns: {summary['conversation_turns']}")
-    lines.append(f"🔧 Tool calls: {summary['tool_call_count']}")
+    # Session stats with emoji and markdown
+    model = escape_markdown_v2(summary['model'])
+    duration = escape_markdown_v2(format_duration(summary['duration']))
+    lines.append(f"🤖 *Model:* `{model}`")
+    lines.append(f"⏱️ *Duration:* {duration}")
+    lines.append(f"💬 *Turns:* {summary['conversation_turns']}")
+    lines.append(f"🔧 *Tool calls:* {summary['tool_call_count']}")
 
-    # Token usage with emoji
+    # Session token usage with emoji and markdown
     if summary["total_tokens"]:
-        lines.append(f"📊 Tokens: {summary['total_tokens']:,}")
+        lines.append(f"📊 *Tokens:* {summary['total_tokens']:,}")
         if summary["prompt_tokens"] and summary["completion_tokens"]:
-            lines.append(f"   ├─ Prompt: {summary['prompt_tokens']:,}")
-            lines.append(f"   └─ Completion: {summary['completion_tokens']:,}")
+            lines.append(f"   ├─ *Prompt:* {summary['prompt_tokens']:,}")
+            lines.append(f"   └─ *Completion:* {summary['completion_tokens']:,}")
+
+    # Summary generation tokens (separate section)
+    if summary_tokens and summary_tokens.get("total_tokens", 0) > 0:
+        lines.append(f"🤖 *Summary Token:* {summary_tokens['total_tokens']:,}")
+        if summary_tokens.get("input_tokens") and summary_tokens.get("output_tokens"):
+            lines.append(f"   ├─ *Input:* {summary_tokens['input_tokens']:,}")
+            lines.append(f"   └─ *Output:* {summary_tokens['output_tokens']:,}")
 
     # Errors
     if summary["errors"]:
         error_count = len(summary["errors"])
-        lines.append(f"⚠️ Errors: {error_count}")
+        lines.append(f"⚠️ *Errors:* {error_count}")
 
     return "\n".join(lines)
 
@@ -312,9 +368,9 @@ def send_to_telegram(message: str) -> bool:
         # Get chat IDs from environment or config
         env = os.environ.copy()
 
-        # Use the claude-telegram-bot CLI
+        # Use the claude-telegram-bot CLI with MarkdownV2 formatting
         result = subprocess.run(
-            ["claude-telegram-bot", "send", message],
+            ["claude-telegram-bot", "send", message, "--parse-mode", "MarkdownV2"],
             capture_output=True,
             text=True,
             env=env,
@@ -343,16 +399,17 @@ def main():
     summary = get_session_summary(data)
     _debug(f"Session summary: {json.dumps(summary, indent=2)[:800]}")
 
-    ai_summary = generate_ai_summary(summary.get("conversation", []))
-    session_stats = generate_session_stats(summary)
+    ai_summary, summary_tokens = generate_ai_summary(summary.get("conversation", []))
+    session_stats = generate_session_stats(summary, summary_tokens)
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    header = f"🔔 CC Session Ended\nReason: {summary['reason']} | Time: {timestamp}"
+    header = f"===============\n\n🔔 *CC Session Ended*\n\nReason: *{escape_markdown_v2(summary['reason'])}*\nTime: *{escape_markdown_v2(timestamp)}*"
 
     parts = [header, session_stats]
     if ai_summary:
-        parts.append("\n📝 Summary:")
-        parts.append(format_ai_summary_as_bullets(ai_summary))
+        parts.append("📝 *Summary:*")
+        # Escape the entire summary for MarkdownV2
+        parts.append(escape_markdown_v2(format_ai_summary_as_bullets(ai_summary)))
 
     full_message = "\n\n".join(parts)
 
