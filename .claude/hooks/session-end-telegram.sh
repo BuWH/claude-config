@@ -1,14 +1,11 @@
 #!/bin/bash
 # SessionEnd hook: Send notification to Telegram when Claude Code exits
 
-# Set project directory - use CLAUDE_PROJECT_DIR if set, otherwise use script directory
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 
-# Activate virtualenv
-source "$PROJECT_DIR/.venv/bin/activate"
+# Load .env and export variables
+[ -f "$PROJECT_DIR/.env" ] && set -a && source "$PROJECT_DIR/.env" && set +a
 
-# Read JSON input from stdin and pipe to Python script
+# Activate virtualenv and run Python script
+source "$PROJECT_DIR/.venv/bin/activate" && \
 python3 "$PROJECT_DIR/.claude/hooks/session_end_notifier.py"
-
-# Exit with success
-exit 0
