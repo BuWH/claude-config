@@ -12,6 +12,18 @@ import os
 import subprocess
 from datetime import datetime
 
+# Import markdown utilities from claude-code-telegram-bot package
+try:
+    from claude_code_telegram_bot.formatting.markdown import escape_markdown_v2
+except ImportError:
+    # Fallback if package is not installed
+    def escape_markdown_v2(text: str) -> str:
+        """Escape text for Telegram MarkdownV2 format."""
+        if not text:
+            return text
+        special_chars = r'_*[]()~`>#+-=|{}.!'
+        return ''.join(f'\\{c}' if c in special_chars else c for c in text)
+
 # Optional httpx for REST API calls
 try:
     import httpx
@@ -186,31 +198,6 @@ def get_session_summary(data: dict) -> dict:
     return summary
 
 
-def escape_markdown_v2(text: str) -> str:
-    """Escape text for Telegram MarkdownV2 format.
-
-    MarkdownV2 requires escaping these special characters:
-    _ * [ ] ( ) ~ ` > # + - = | { } . !
-
-    ALL instances must be escaped, even inside inline code.
-    """
-    if not text:
-        return text
-    special_chars = r'_*[]()~`>#+-=|{}.!'
-    return ''.join(f'\\{c}' if c in special_chars else c for c in text)
-
-
-def escape_markdown_v2_safe(text: str) -> str:
-    """Escape text for Telegram MarkdownV2, preserving bold markers.
-
-    Only escapes the actual content, not *bold* markers.
-    """
-    if not text:
-        return text
-    special_chars = r'_[]()~`>#+-=|{}.!'
-    return ''.join(f'\\{c}' if c in special_chars else c for c in text)
-
-
 def format_duration(seconds: int | None) -> str:
     """Format duration in human-readable format."""
     if seconds is None:
@@ -286,33 +273,6 @@ def generate_ai_summary(conversation: list) -> tuple[str, dict]:
         print(f"Summary generation error: {e}", file=sys.stderr)
 
     return "", {}
-
-
-def format_ai_summary_as_bullets(summary_text: str) -> str:
-    """Format AI summary as bullet points (plain text, no markdown)."""
-    if not summary_text:
-        return ""
-
-    # Already formatted bullets - keep as is but clean up
-    first_char = summary_text.strip()[0]
-    if first_char in '-*•0123456789':
-        lines = [line.strip() for line in summary_text.split('\n') if line.strip()]
-        return '\n'.join(lines)
-
-    # Format as bullets
-    summary_text = ' '.join(summary_text.split())
-    lines = [line.strip() for line in summary_text.split('\n') if line.strip()]
-
-    formatted = []
-    for line in lines:
-        if line[0] in '-*•0123456789':
-            formatted.append(line)
-        else:
-            if not line.endswith(('.!', '?', ':', '.')):
-                line += '.'
-            formatted.append(f"• {line}")
-
-    return '\n'.join(formatted)
 
 
 def generate_session_stats(summary: dict, summary_tokens: dict = None) -> str:
@@ -403,13 +363,20 @@ def main():
     session_stats = generate_session_stats(summary, summary_tokens)
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    header = f"===============\n\n🔔 *CC Session Ended*\n\nReason: *{escape_markdown_v2(summary['reason'])}*\nTime: *{escape_markdown_v2(timestamp)}*"
+    header = f"{'='*16}\n\n🔔 *CC Session Ended*\n\nReason: *{escape_markdown_v2(summary['reason'])}*\nTime: *{escape_markdown_v2(timestamp)}*"
 
     parts = [header, session_stats]
     if ai_summary:
         parts.append("📝 *Summary:*")
-        # Escape the entire summary for MarkdownV2
-        parts.append(escape_markdown_v2(format_ai_summary_as_bullets(ai_summary)))
+        # Format as bullet points and escape for MarkdownV2
+        summary_lines = []
+        for line in ai_summary.strip().split('\n'):
+            line = line.strip()
+            if line:
+                if not line.startswith('•'):
+                    line = f"• {line}"
+                summary_lines.append(escape_markdown_v2(line))
+        parts.append('\n'.join(summary_lines))
 
     full_message = "\n\n".join(parts)
 
