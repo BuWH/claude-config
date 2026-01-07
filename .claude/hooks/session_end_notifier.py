@@ -14,15 +14,28 @@ from datetime import datetime
 
 # Import markdown utilities from claude-code-telegram-bot package
 try:
-    from claude_code_telegram_bot.formatting.markdown import escape_markdown_v2
+    from claude_code_telegram_bot.formatting.markdown import (
+        escape_markdown_v2,
+        bold,
+        code,
+        format_list,
+    )
 except ImportError:
     # Fallback if package is not installed
     def escape_markdown_v2(text: str) -> str:
-        """Escape text for Telegram MarkdownV2 format."""
         if not text:
             return text
         special_chars = r'_*[]()~`>#+-=|{}.!'
         return ''.join(f'\\{c}' if c in special_chars else c for c in text)
+
+    def bold(text: str) -> str:
+        return f"*{text}*"
+
+    def code(text: str) -> str:
+        return f"`{text}`"
+
+    def format_list(items: list) -> str:
+        return '\n'.join(f"• {item}" for item in items)
 
 # Optional httpx for REST API calls
 try:
@@ -284,40 +297,40 @@ def generate_session_stats(summary: dict, summary_tokens: dict = None) -> str:
     """
     lines = []
 
-    # Project info - use full path with markdown
+    # Project info - use package formatting helpers
     if summary["project_dir"]:
         project = escape_markdown_v2(summary['project_dir'])
-        lines.append(f"📁 *Project:* `{project}`")
+        lines.append(f"📁 {bold('Project:')}: {code(project)}")
         if summary["git_branch"]:
             branch = escape_markdown_v2(summary['git_branch'])
-            lines.append(f"🌿 *Branch:* `{branch}`")
+            lines.append(f"🌿 {bold('Branch:')}: {code(branch)}")
 
     # Session stats with emoji and markdown
     model = escape_markdown_v2(summary['model'])
     duration = escape_markdown_v2(format_duration(summary['duration']))
-    lines.append(f"🤖 *Model:* `{model}`")
-    lines.append(f"⏱️ *Duration:* {duration}")
-    lines.append(f"💬 *Turns:* {summary['conversation_turns']}")
-    lines.append(f"🔧 *Tool calls:* {summary['tool_call_count']}")
+    lines.append(f"🤖 {bold('Model:')}: {code(model)}")
+    lines.append(f"⏱️ {bold('Duration:')} {duration}")
+    lines.append(f"💬 {bold('Turns:')} {summary['conversation_turns']}")
+    lines.append(f"🔧 {bold('Tool calls:')} {summary['tool_call_count']}")
 
     # Session token usage with emoji and markdown
     if summary["total_tokens"]:
-        lines.append(f"📊 *Tokens:* {summary['total_tokens']:,}")
+        lines.append(f"📊 {bold('Tokens:')} {summary['total_tokens']:,}")
         if summary["prompt_tokens"] and summary["completion_tokens"]:
-            lines.append(f"   ├─ *Prompt:* {summary['prompt_tokens']:,}")
-            lines.append(f"   └─ *Completion:* {summary['completion_tokens']:,}")
+            lines.append(f"   ├─ {bold('Prompt:')} {summary['prompt_tokens']:,}")
+            lines.append(f"   └─ {bold('Completion:')} {summary['completion_tokens']:,}")
 
     # Summary generation tokens (separate section)
     if summary_tokens and summary_tokens.get("total_tokens", 0) > 0:
-        lines.append(f"🤖 *Summary Token:* {summary_tokens['total_tokens']:,}")
+        lines.append(f"🤖 {bold('Summary Token:')} {summary_tokens['total_tokens']:,}")
         if summary_tokens.get("input_tokens") and summary_tokens.get("output_tokens"):
-            lines.append(f"   ├─ *Input:* {summary_tokens['input_tokens']:,}")
-            lines.append(f"   └─ *Output:* {summary_tokens['output_tokens']:,}")
+            lines.append(f"   ├─ {bold('Input:')} {summary_tokens['input_tokens']:,}")
+            lines.append(f"   └─ {bold('Output:')} {summary_tokens['output_tokens']:,}")
 
     # Errors
     if summary["errors"]:
         error_count = len(summary["errors"])
-        lines.append(f"⚠️ *Errors:* {error_count}")
+        lines.append(f"⚠️ {bold('Errors:')} {error_count}")
 
     return "\n".join(lines)
 
@@ -371,11 +384,11 @@ def main():
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # Note: = characters need to be escaped for MarkdownV2
-    header = f"{escape_markdown_v2('='*16)}\n\n🔔 *CC Session Ended*\n\nReason: *{escape_markdown_v2(summary['reason'])}*\nTime: *{escape_markdown_v2(timestamp)}*"
+    header = f"{escape_markdown_v2('='*16)}\n\n🔔 {bold('CC Session Ended')}\n\nReason: {bold(escape_markdown_v2(summary['reason']))}\nTime: {bold(escape_markdown_v2(timestamp))}"
 
     parts = [header, session_stats]
     if ai_summary:
-        parts.append("📝 *Summary:*")
+        parts.append(f"📝 {bold('Summary:')}")
         # Format as bullet points and escape for MarkdownV2
         summary_lines = []
         for line in ai_summary.strip().split('\n'):
