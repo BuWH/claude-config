@@ -328,9 +328,16 @@ def send_to_telegram(message: str) -> bool:
         # Get chat IDs from environment or config
         env = os.environ.copy()
 
-        # Use the claude-telegram-bot CLI with MarkdownV2 formatting
+        # Use the virtual environment Python from telegram-bot project
+        # Default to /Users/wenhe/code/claude-code-telegram-bot/.venv/bin/python
+        bot_python = os.environ.get(
+            "CLAUDE_TELEGRAM_BOT_PYTHON",
+            "/Users/wenhe/code/claude-code-telegram-bot/.venv/bin/python"
+        )
+
+        # Use python -m to run the CLI with MarkdownV2 formatting
         result = subprocess.run(
-            ["claude-telegram-bot", "send", message, "--parse-mode", "MarkdownV2"],
+            [bot_python, "-m", "claude_code_telegram_bot.cli.main", "send", message, "--parse-mode", "MarkdownV2"],
             capture_output=True,
             text=True,
             env=env,
@@ -363,7 +370,8 @@ def main():
     session_stats = generate_session_stats(summary, summary_tokens)
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    header = f"{'='*16}\n\n🔔 *CC Session Ended*\n\nReason: *{escape_markdown_v2(summary['reason'])}*\nTime: *{escape_markdown_v2(timestamp)}*"
+    # Note: = characters need to be escaped for MarkdownV2
+    header = f"{escape_markdown_v2('='*16)}\n\n🔔 *CC Session Ended*\n\nReason: *{escape_markdown_v2(summary['reason'])}*\nTime: *{escape_markdown_v2(timestamp)}*"
 
     parts = [header, session_stats]
     if ai_summary:
