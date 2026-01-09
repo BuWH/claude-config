@@ -24,5 +24,5 @@ if [ -f "$PROJECT_DIR/.env" ]; then
     set +a
 fi
 
-# Read session data from stdin and process with Node.js
-cat | bun "$BOT_CLI_DIR/packages/cli/src/session-end-handler.ts"
+# Read session data from stdin and process with Node.js (async)
+cat | bun "$BOT_CLI_DIR/packages/cli/src/session-end-handler.ts" &>/dev/null &
